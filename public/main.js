@@ -1,6 +1,6 @@
 /**
- * Expense Tracker frontend: tab switching, expense and salary forms,
- * the monthly summary, and the error dialog.
+ * Expense Tracker frontend: lists expenses and salaries, handles the
+ * add/edit forms, shows the summary and reports errors.
  */
 
 // ---------- API ----------
@@ -46,7 +46,7 @@ async function request(method, url, body) {
   const data = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    const message = data?.errors?.join('\n') ?? data?.error ?? `Request failed (${response.status}).`;
+    const message = data?.errors?.join('\n') ?? data?.error ?? `${method} ${url} failed (${response.status}).`;
     throw new ApiError(message, response.status);
   }
   return data;
@@ -68,7 +68,9 @@ function showError(message, onRetry) {
   document.getElementById('error-message').textContent = message;
   retryAction = onRetry ?? null;
   retryButton.hidden = !onRetry;
-  errorDialog.showModal();
+  if (!errorDialog.open) {
+    errorDialog.showModal();
+  }
 }
 
 retryButton.addEventListener('click', () => {
@@ -80,23 +82,25 @@ document.getElementById('close-button').addEventListener('click', () => errorDia
 
 /**
  * Runs an API action and shows the error dialog if it fails.
- * Invalid input (400) offers no retry; not found (404) retries by reloading;
- * any other error retries the same action.
+ * Invalid input (400) offers no retry; not found (404) retries by reloading
+ * the page data; any other error retries the same action.
  *
  * @param {Function} action - Async function that calls the API.
- * @param {Function} [reload] - Reloads the current list after a 404.
+ * @returns {Promise<boolean>} True if the action succeeded.
  */
-async function attempt(action, reload) {
+async function attempt(action) {
   try {
     await action();
+    return true;
   } catch (err) {
     if (err.status === 400) {
       showError(err.message);
-    } else if (err.status === 404 && reload) {
-      showError(err.message, reload);
+    } else if (err.status === 404) {
+      showError(err.message, loadAll);
     } else {
-      showError(err.message, () => attempt(action, reload));
+      showError(err.message, () => attempt(action));
     }
+    return false;
   }
 }
 
@@ -106,13 +110,34 @@ function formatMoney(amount) {
   return amount === null || amount === undefined ? 'Not available' : amount.toFixed(2);
 }
 
-function cell(text, className) {
+/**
+ * Formats a YYYY-MM-DD date as a month and year, e.g. "Nov 2026".
+ */
+function formatMonth(date) {
+  return new Date(`${date}T00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function todayString() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function cell(content, className) {
   const td = document.createElement('td');
-  td.textContent = text;
+  td.append(content);
   if (className) {
     td.className = className;
   }
   return td;
+}
+
+function badge(category) {
+  const span = document.createElement('span');
+  span.className = `badge ${category}`;
+  span.textContent = category === 'basic' ? 'Basic need' : 'Extra';
+  return span;
 }
 
 function actionButtons(onEdit, onDelete) {
@@ -120,12 +145,12 @@ function actionButtons(onEdit, onDelete) {
   td.className = 'actions';
 
   const edit = document.createElement('button');
-  edit.className = 'secondary';
+  edit.className = 'secondary outline';
   edit.textContent = 'Edit';
   edit.addEventListener('click', onEdit);
 
   const remove = document.createElement('button');
-  remove.className = 'danger';
+  remove.className = 'contrast outline';
   remove.textContent = 'Delete';
   remove.addEventListener('click', onDelete);
 
@@ -134,15 +159,17 @@ function actionButtons(onEdit, onDelete) {
 }
 
 /**
- * Wires up an add/edit form for one resource.
+ * Wires up an inline add/edit form for one resource.
  * In edit mode the submit button reads "Save" and a Cancel button is shown.
  *
- * @param {HTMLFormElement} form
- * @param {object} handlers
- * @param {Function} handlers.toBody - Converts the form into a request body.
- * @param {Function} handlers.save - Async function (body, editingId) that calls the API.
+ * @param {object} config
+ * @param {HTMLFormElement} config.form
+ * @param {string} config.noun - Name used in the submit button, e.g. "expense".
+ * @param {Function} config.toBody - Converts the form into a request body.
+ * @param {Function} config.save - Async function (body, editingId) that calls the API.
+ * @returns {{ edit: Function }} edit(entry) fills the form with an existing entry.
  */
-function setUpForm(form, { toBody, save }) {
+function setUpForm({ form, noun, toBody, save }) {
   const submitButton = form.querySelector('button[type="submit"]');
   const cancelButton = form.querySelector('.cancel');
   let editingId = null;
@@ -150,37 +177,95 @@ function setUpForm(form, { toBody, save }) {
   function reset() {
     editingId = null;
     form.reset();
-    submitButton.textContent = 'Add';
+    form.elements.date.value = todayString();
+    submitButton.textContent = `Add ${noun}`;
     cancelButton.hidden = true;
   }
 
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    attempt(async () => {
-      await save(toBody(form), editingId);
+    const saved = await attempt(() => save(toBody(form), editingId));
+    if (saved) {
       reset();
-    });
+    }
   });
 
   cancelButton.addEventListener('click', reset);
+  reset();
 
   return {
-    edit(id, values) {
-      editingId = id;
-      for (const [name, value] of Object.entries(values)) {
+    edit(entry) {
+      editingId = entry.id;
+      for (const [name, value] of Object.entries(entry)) {
         if (form.elements[name]) {
           form.elements[name].value = value;
         }
       }
-      submitButton.textContent = 'Save';
+      submitButton.textContent = `Save ${noun}`;
       cancelButton.hidden = false;
+      form.elements[0].focus();
+    },
+  };
+}
+
+/**
+ * Reloads a list after a change, then the summary. A summary failure
+ * does not fail the change that was already saved.
+ *
+ * @param {Function} loadList - loadExpenses or loadSalaries.
+ */
+async function refresh(loadList) {
+  await loadList();
+  await loadSummary().catch((err) => console.error(err.message));
+}
+
+/** Number of entries shown before "Show all" is pressed. */
+const RECENT_COUNT = 3;
+
+/**
+ * Renders a list of entries into a table, newest date first.
+ * Shows the most recent entries until "Show all" is pressed.
+ *
+ * @param {object} config
+ * @param {string} config.name - Prefix of the element ids, e.g. "expense".
+ * @param {Function} config.toRow - Builds a table row for one entry.
+ * @returns {{ show: Function }} show(entries) renders a new list.
+ */
+function setUpList({ name, toRow }) {
+  const rows = document.getElementById(`${name}-rows`);
+  const empty = document.getElementById(`${name}-empty`);
+  const toggle = document.getElementById(`${name}-toggle`);
+  let entries = [];
+  let showAll = false;
+
+  function render() {
+    const newestFirst = [...entries].reverse().sort((a, b) => b.date.localeCompare(a.date));
+    const visible = showAll ? newestFirst : newestFirst.slice(0, RECENT_COUNT);
+
+    rows.replaceChildren(...visible.map(toRow));
+    empty.hidden = entries.length > 0;
+    toggle.hidden = entries.length <= RECENT_COUNT;
+    toggle.textContent = showAll ? 'Show recent' : `Show all (${entries.length})`;
+  }
+
+  toggle.addEventListener('click', () => {
+    showAll = !showAll;
+    render();
+  });
+
+  return {
+    show(newEntries) {
+      entries = newEntries;
+      render();
     },
   };
 }
 
 // ---------- Expenses ----------
 
-const expenseForm = setUpForm(document.getElementById('expense-form'), {
+const expenseForm = setUpForm({
+  form: document.getElementById('expense-form'),
+  noun: 'expense',
   toBody: (form) => ({
     description: form.elements.description.value,
     amount: Number(form.elements.amount.value),
@@ -193,43 +278,40 @@ const expenseForm = setUpForm(document.getElementById('expense-form'), {
     } else {
       await request('POST', '/api/expenses', body);
     }
-    await loadExpenses();
+    await refresh(loadExpenses);
+  },
+});
+
+const expenseList = setUpList({
+  name: 'expense',
+  toRow: (expense) => {
+    const row = document.createElement('tr');
+    row.append(
+      cell(expense.date, 'nowrap'),
+      cell(expense.description),
+      cell(badge(expense.category)),
+      cell(formatMoney(expense.amount), 'number'),
+      actionButtons(
+        () => expenseForm.edit(expense),
+        () => attempt(async () => {
+          await request('DELETE', `/api/expenses/${expense.id}`);
+          await refresh(loadExpenses);
+        }),
+      ),
+    );
+    return row;
   },
 });
 
 async function loadExpenses() {
-  const expenses = await request('GET', '/api/expenses');
-  const rows = document.getElementById('expense-rows');
-  rows.replaceChildren();
-
-  for (const expense of expenses) {
-    const row = document.createElement('tr');
-    row.append(
-      cell(expense.date),
-      cell(expense.description),
-      cell(expense.category === 'basic' ? 'Basic need' : 'Extra'),
-      cell(formatMoney(expense.amount), 'number'),
-      actionButtons(
-        () => expenseForm.edit(expense.id, expense),
-        () => attempt(async () => {
-          await request('DELETE', `/api/expenses/${expense.id}`);
-          await loadExpenses();
-        }, refreshExpenses),
-      ),
-    );
-    rows.append(row);
-  }
-
-  document.getElementById('expense-empty').hidden = expenses.length > 0;
-}
-
-function refreshExpenses() {
-  attempt(loadExpenses);
+  expenseList.show(await request('GET', '/api/expenses'));
 }
 
 // ---------- Salary ----------
 
-const salaryForm = setUpForm(document.getElementById('salary-form'), {
+const salaryForm = setUpForm({
+  form: document.getElementById('salary-form'),
+  noun: 'salary',
   toBody: (form) => ({
     date: form.elements.date.value,
     amount: Number(form.elements.amount.value),
@@ -240,73 +322,61 @@ const salaryForm = setUpForm(document.getElementById('salary-form'), {
     } else {
       await request('POST', '/api/salaries', body);
     }
-    await loadSalaries();
+    await refresh(loadSalaries);
+  },
+});
+
+const salaryList = setUpList({
+  name: 'salary',
+  toRow: (salary) => {
+    const row = document.createElement('tr');
+    row.append(
+      cell(formatMonth(salary.date), 'nowrap'),
+      cell(formatMoney(salary.amount), 'number'),
+      actionButtons(
+        () => salaryForm.edit(salary),
+        () => attempt(async () => {
+          await request('DELETE', `/api/salaries/${salary.id}`);
+          await refresh(loadSalaries);
+        }),
+      ),
+    );
+    return row;
   },
 });
 
 async function loadSalaries() {
-  const salaries = await request('GET', '/api/salaries');
-  const rows = document.getElementById('salary-rows');
-  rows.replaceChildren();
-
-  for (const salary of salaries) {
-    const row = document.createElement('tr');
-    row.append(
-      cell(salary.date),
-      cell(formatMoney(salary.amount), 'number'),
-      actionButtons(
-        () => salaryForm.edit(salary.id, salary),
-        () => attempt(async () => {
-          await request('DELETE', `/api/salaries/${salary.id}`);
-          await loadSalaries();
-        }, refreshSalaries),
-      ),
-    );
-    rows.append(row);
-  }
-
-  document.getElementById('salary-empty').hidden = salaries.length > 0;
-}
-
-function refreshSalaries() {
-  attempt(loadSalaries);
+  salaryList.show(await request('GET', '/api/salaries'));
 }
 
 // ---------- Summary ----------
 
-document.getElementById('summary-form').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const month = event.target.elements.month.value;
-  attempt(() => loadSummary(month));
-});
-
-async function loadSummary(month) {
-  const summary = await request('GET', `/api/summary?month=${encodeURIComponent(month)}`);
-  const result = document.getElementById('summary-result');
+/**
+ * Loads the summary totals from the API and shows them.
+ */
+async function loadSummary() {
+  const summary = await request('GET', '/api/summary');
 
   for (const field of ['salary', 'basic', 'extra', 'total', 'savings']) {
-    result.querySelector(`[data-field="${field}"]`).textContent = formatMoney(summary[field]);
+    const value = document.querySelector(`[data-field="${field}"]`);
+    value.textContent = formatMoney(summary[field]);
+    value.classList.toggle('negative', summary[field] < 0);
   }
-  result.hidden = false;
 }
 
-// ---------- Tabs ----------
+// ---------- Startup ----------
 
-const loaders = {
-  expenses: refreshExpenses,
-  salary: refreshSalaries,
-  summary: () => {},
-};
-
-for (const tab of document.querySelectorAll('.tab')) {
-  tab.addEventListener('click', () => {
-    for (const other of document.querySelectorAll('.tab')) {
-      const selected = other === tab;
-      other.setAttribute('aria-selected', String(selected));
-      document.getElementById(other.dataset.tab).hidden = !selected;
+/**
+ * Loads expenses, salaries and the summary. Failures are logged to the
+ * console; the affected section keeps its empty state.
+ */
+async function loadAll() {
+  const results = await Promise.allSettled([loadExpenses(), loadSalaries(), loadSummary()]);
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error(result.reason.message);
     }
-    loaders[tab.dataset.tab]();
-  });
+  }
 }
 
-refreshExpenses();
+loadAll();

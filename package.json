@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/ssthapit-smcm/COSC301-ExpenseTracker-JS#readme",
   "dependencies": {
+    "@picocss/pico": "^2.1.1",
     "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
     "dayjs": "^1.11.23",
