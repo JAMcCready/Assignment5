@@ -29,6 +29,7 @@ export function createApp({ dataDir }) {
   app.use('/api/salaries', salaryRoutes(salaries));
   app.use('/api/summary', summaryRoutes(summaryService));
 
+  app.use(notFound);
   app.use(errorHandler);
 
   return app;
@@ -48,4 +49,14 @@ function errorHandler(err, req, res, next) {
 
   console.error(err);
   res.status(500).json({ error: 'Could not read or write data' });
+}
+
+/**
+ * Handles URLs that match no route: JSON for API requests, the 404 page otherwise.
+ */
+function notFound(req, res) {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: `${req.method} ${req.path} not found` });
+  }
+  res.status(404).sendFile('404.html', { root: 'public' });
 }
