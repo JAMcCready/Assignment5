@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense Tracker</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <header class="container">
+    <div class="app-header">
+      <img src="assets/logo.svg" alt="Expense Tracker logo" width="44" height="44">
+      <h1>Expense Tracker</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="cards">
+      <article id="expenses">
+        <h2>Expenses</h2>
+        <form id="expense-form" class="entry-form">
+          <label class="wide">Description
+            <input name="description" maxlength="100" required>
+          </label>
+          <label>Amount
+            <input name="amount" type="number" step="any" min="0.01" required>
+          </label>
+          <label>Category
+            <select name="category">
+              <option value="basic">Basic need</option>
+              <option value="extra">Extra</option>
+            </select>
+          </label>
+          <label>Date
+            <input name="date" type="date" required>
+          </label>
+          <div class="form-buttons">
+            <button type="submit">Add expense</button>
+            <button type="button" class="secondary outline cancel" hidden>Cancel</button>
+          </div>
+        </form>
+        <div class="overflow-auto">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="number">Amount</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="expense-rows"></tbody>
+          </table>
+        </div>
+        <p id="expense-empty" class="empty">No expenses yet.</p>
+      </article>
+
+      <article id="salary">
+        <h2>Salary</h2>
+        <form id="salary-form" class="entry-form">
+          <label>Pay date
+            <input name="date" type="date" required>
+          </label>
+          <label>Amount
+            <input name="amount" type="number" step="any" min="0.01" required>
+          </label>
+          <div class="form-buttons full">
+            <button type="submit">Add salary</button>
+            <button type="button" class="secondary outline cancel" hidden>Cancel</button>
+          </div>
+        </form>
+        <div class="overflow-auto">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Pay date</th>
+                <th scope="col" class="number">Amount</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="salary-rows"></tbody>
+          </table>
+        </div>
+        <p id="salary-empty" class="empty">No salaries yet.</p>
+      </article>
+    </div>
+
+    <article id="summary">
+      <header class="card-header">
+        <h2>Summary</h2>
+        <span class="muted">All time</span>
+      </header>
+      <div class="stats">
+        <div class="stat"><span>Salary</span><strong data-field="salary">–</strong></div>
+        <div class="stat"><span>Basic needs</span><strong data-field="basic">–</strong></div>
+        <div class="stat"><span>Extras</span><strong data-field="extra">–</strong></div>
+        <div class="stat"><span>Total spent</span><strong data-field="total">–</strong></div>
+        <div class="stat"><span>Savings</span><strong data-field="savings">–</strong></div>
+      </div>
+    </article>
+
+  </main>
+
+  <dialog id="error-dialog">
+    <article>
+      <h3 class="error-title">Something went wrong</h3>
+      <p id="error-message"></p>
+      <footer class="dialog-actions">
+        <button type="button" class="secondary outline" id="close-button">Close</button>
+        <button type="button" id="retry-button">Retry</button>
+      </footer>
+    </article>
+  </dialog>
+</body>
+</html>

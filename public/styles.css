@@ -1,0 +1,225 @@
+/* App-specific styles on top of Pico CSS. */
+
+[hidden] {
+  display: none !important;
+}
+
+header.container,
+main.container {
+  max-width: 1200px;
+  padding-inline: 1.5rem;
+}
+
+/* Header: logo on the left, title centered. */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-block: 1.5rem;
+}
+
+.app-header h1 {
+  margin: 0 44px 0 0;
+}
+
+/* Expenses and salary side by side; they wrap onto separate rows when narrow. */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pico-grid-column-gap);
+}
+
+#expenses {
+  flex: 3 1 420px;
+}
+
+#salary {
+  flex: 2 1 280px;
+}
+
+.cards > article {
+  min-width: 0;
+}
+
+article h2 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h2 {
+  margin: 0;
+}
+
+.muted {
+  color: var(--pico-muted-color);
+}
+
+/* Entry forms: an inner box at the top of each card. Fields wrap to fit. */
+.entry-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  --pico-form-element-spacing-horizontal: 0.6rem;
+}
+
+.entry-form > * {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.entry-form > .wide {
+  flex: 2 1 240px;
+}
+
+.entry-form > label:has(select) {
+  flex-basis: 170px;
+}
+
+.entry-form > .full {
+  flex-basis: 100%;
+}
+
+.entry-form label {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.entry-form input,
+.entry-form select {
+  margin: 0.25rem 0 0;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-buttons button {
+  flex: 1;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Tables. */
+table {
+  font-size: 0.95rem;
+}
+
+th,
+td {
+  padding: 0.5rem;
+}
+
+th,
+td.nowrap {
+  white-space: nowrap;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.actions button {
+  width: auto;
+  margin: 0 0 0 0.25rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  background: var(--pico-secondary-background);
+  color: var(--pico-secondary-inverse);
+}
+
+.badge.basic {
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+}
+
+.empty {
+  color: var(--pico-muted-color);
+  margin: 0;
+}
+
+/* Summary figures. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.stat {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+}
+
+.stat span {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+}
+
+.stat strong {
+  font-size: 1.5rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat strong.negative {
+  color: var(--pico-del-color);
+}
+
+/* Error dialog. */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.dialog-actions button {
+  width: auto;
+  margin: 0;
+}
+
+.error-title {
+  color: var(--pico-del-color);
+}
+
+#error-message {
+  white-space: pre-line;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

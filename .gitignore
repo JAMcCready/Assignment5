@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# App data (CSV files are created at runtime, never committed)
+data/
+
+# Environment settings (commit .env.example instead)
+.env
+.env.*
+!.env.example
+
+# Test coverage reports
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
