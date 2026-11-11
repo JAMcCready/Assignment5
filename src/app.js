@@ -36,15 +36,15 @@ export function createApp({ dataDir }) {
 }
 
 /**
- * Sends errors as JSON: 400 for invalid input, 500 for anything else.
+ * Sends errors as JSON { error: message }: 400 for invalid input, 500 for anything else.
  */
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   if (err instanceof ValidationError) {
-    return res.status(400).json({ errors: err.errors });
+    return res.status(400).json({ error: err.errors.join('\n') });
   }
   if (err.status === 400) {
-    return res.status(400).json({ errors: ['request body must be valid JSON'] });
+    return res.status(400).json({ error: 'Request body must be valid JSON' });
   }
 
   console.error(err);

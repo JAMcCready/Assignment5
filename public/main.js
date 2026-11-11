@@ -43,11 +43,9 @@ async function request(method, url, body) {
   }
 
   const isJson = response.headers.get('Content-Type')?.includes('application/json');
-  const data = isJson ? await response.json() : null;
-
+  const data = await response.json();
   if (!response.ok) {
-    const message = data?.errors?.join('\n') ?? data?.error ?? `${method} ${url} failed (${response.status}).`;
-    throw new ApiError(message, response.status);
+    throw new ApiError(data.error, response.status);
   }
   return data;
 }
