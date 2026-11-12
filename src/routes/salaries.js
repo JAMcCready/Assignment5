@@ -7,8 +7,6 @@ import { Router } from 'express';
  * @param {import('../repositories/Ledger.js').Ledger} ledger - Ledger that stores salaries.
  * @returns {Router}
  */
-
-// TODO: Remove this line once ledger is used below.
 export function salaryRoutes(ledger) {
   const router = Router();
 
