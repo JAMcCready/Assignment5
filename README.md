@@ -1,4 +1,4 @@
-[![Node.js CI](https://github.com/JAMcCready/Assignment5/actions/workflows/node.js.yml/badge.svg)](https://github.com/JAMcCready/Assignment5/actions/workflows/node.js.yml)
+[![Node.js CI](https://github.com/JAMcCready/Assignment5/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/JAMcCready/Assignment5/actions/workflows/node.js.yml)
 
 # Expense Tracker: Instructions
 
